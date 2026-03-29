@@ -1,0 +1,58 @@
+export const ALGORITHM_DEFINITIONS = {
+  pace: {
+    id: 'pace',
+    name: 'Booking Pace / Pickup Model',
+    desc: 'Adjusts base forecast based on trailing 7-day velocity vs Last Year.',
+    longDesc: 'The Pace model continuously monitors the booking velocity (rooms sold per day) over the last 7 days and compares it to the exact same booking window from last year. If velocity is higher than expected, it applies a multiplier to the demand forecast to push rates up earlier.',
+    whenToDisable: "Disable if your hotel recently underwent a major renovation or repositioning, rendering last year's booking patterns irrelevant.",
+  },
+  elasticity: {
+    id: 'elasticity',
+    name: 'Price Elasticity Curve',
+    desc: 'Predicts conversion drop-off when passing competitor price thresholds.',
+    longDesc: 'This model plots historical conversion rates against price points to find "resistance thresholds." It prevents the system from blindly raising prices into a zone where demand historically drops to zero.',
+    whenToDisable: 'Disable during extreme macro-events (e.g., Olympics, sudden flight cancellations).',
+  },
+  overbooking: {
+    id: 'overbooking',
+    name: 'Overbooking Optimizer',
+    desc: 'Dynamically manages false-capacity based on historic cancellation models.',
+    longDesc: 'Using the Newsvendor inventory model, this algorithm calculates the statistical probability of cancellations and no-shows by segment. It intentionally oversells the lowest-tier room categories to ensure 100% occupancy.',
+    whenToDisable: 'Disable immediately if a VIP group is in-house, or if local partner hotels are completely sold out.',
+  },
+  displacement: {
+    id: 'displacement',
+    name: 'Segment Displacement Protection',
+    desc: 'Protects last available rooms for high-yielding segments (e.g. Corporate).',
+    longDesc: 'When approaching sell-out, the system calculates the probability of late-booking, high-yield segments (like Corporate business travelers). It recommends shutting off lower-yield segments or OTAs to preserve inventory for full rack-rate direct bookings.',
+    whenToDisable: 'Disable if your corporate demand has structurally changed (e.g. major local office closure).',
+  },
+  channel: {
+    id: 'channel',
+    name: 'Dynamic Channel Yielding (Net RevPAR)',
+    desc: 'Restricts high-commission OTAs during peak demand to maximize Net Profit.',
+    longDesc: 'This algorithm optimizes for NET Revenue, not Gross Revenue. By analyzing channel acquisition costs (e.g., 18% OTA commission vs 0% Direct), it calculates when demand is strong enough to fill the hotel exclusively through direct channels, recommending OTA closures.',
+    whenToDisable: 'Disable if you are participating in a mandatory OTA loyalty promotion where availability parity is contractually required.',
+  },
+  anomaly: {
+    id: 'anomaly',
+    name: 'Anomaly Detection',
+    desc: 'Flags abnormal external search volume or localized event spikes.',
+    longDesc: 'Connects to external data points (OTA search volumes, flight arrivals) to detect sudden demand shifts before they materialize as actual bookings.',
+    whenToDisable: 'Rarely disabled. However, can be toggled off if API connections to external data sources are producing known corrupted data.',
+  },
+  los: {
+    id: 'los',
+    name: 'Minimum Length of Stay (LOS) Controls',
+    desc: 'Enforces minimum night stays during peak shoulder dates.',
+    longDesc: "The system analyzes booking patterns around high-demand peak dates (like a Saturday). If a single peak night sells out too quickly to 1-night stays, it leaves the adjacent 'shoulder' nights (Friday and Sunday) empty. By enforcing a Minimum Night Stay (MNS), the algorithm temporarily rejects single-night bookings, forcing incoming demand to book multi-night stays, thereby maximizing total revenue for the weekend.",
+    whenToDisable: 'Disable this during extreme low-seasons or market downturns where you cannot afford to turn away any demand, even single-night transient stays.',
+  },
+  equity: {
+    id: 'equity',
+    name: 'Fair Share Allocation (Owner Equity)',
+    desc: 'Balances revenue distribution across identical individually-owned units.',
+    longDesc: "In properties with individually owned units (like condotels or managed apartments), the algorithm tracks the Month-To-Date (MTD) revenue of every identical unit. If one unit starts pacing significantly ahead of its peers, the system temporarily throttles its availability on high-volume OTAs. This actively redirects incoming demand into the under-performing units, smoothing out the revenue share so all owners hit their expected returns by month-end.",
+    whenToDisable: 'Disable this if a specific owner is occupying their own unit (owner block), or if a unit is out-of-order for maintenance, which naturally and safely skews the revenue averages.',
+  },
+}
