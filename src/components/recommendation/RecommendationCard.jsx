@@ -186,7 +186,7 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
       </div>
 
       {/* Card Body */}
-      <div className="flex flex-col md:flex-row overflow-hidden md:overflow-visible">
+      <div className="flex flex-col md:flex-row overflow-hidden lg:overflow-visible">
         {/* Left: Driver reasons */}
         <div className="flex-1 p-5 border-b md:border-b-0 md:border-r border-slate-100 bg-white md:rounded-bl-xl">
           <div className="flex items-center justify-between mb-4">
@@ -197,7 +197,7 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
               </span>
             </h4>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-2">
             {displayDrivers.map((driver) => (
               <button
                 key={driver.id}
