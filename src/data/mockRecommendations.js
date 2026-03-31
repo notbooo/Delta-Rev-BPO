@@ -104,6 +104,7 @@ export const generateMockRecommendations = (algoState) => {
                 { id: 'channel_altB', label: 'Spike Price +40%', labelTemplate: 'Spike Price +{spike_pct}%', badge: 'ADR Focus', badgeColor: 'blue',
                   actionLabel: 'Spike Rate',
                   description: 'Leave OTAs open but raise rate aggressively to suppress demand',
+                  exclusiveWith: ['primary'],
                   inputs: [{ field: 'spike_pct', label: 'Rate Spike', unit: '%', min: 10, max: 100, step: 5, default: 40 }],
                   status: 'accepted', payload: { alternative: 'channel_altB', spike_pct: 40 },
                   toastLabel: 'Rate spiked to suppress OTA demand' },
@@ -117,7 +118,8 @@ export const generateMockRecommendations = (algoState) => {
             ? [
                 { id: 'los_altB', label: 'Friday Discount -15%', labelTemplate: 'Friday Discount -{discount_pct}%', badge: 'Demand Pull', badgeColor: 'emerald',
                   actionLabel: 'Apply Discount',
-                  description: 'Incentivise organic 2-night arrivals without restricting Saturday',
+                  description: 'Softer approach — incentivise 2-night arrivals with a discount instead of a hard stay rule',
+                  exclusiveWith: ['primary'],
                   inputs: [{ field: 'discount_pct', label: 'Discount', unit: '%', min: 5, max: 40, step: 5, default: 15 }],
                   status: 'accepted', payload: { alternative: 'los_altB', discount_pct: 15, target_day: 'friday' },
                   toastLabel: 'Friday discount activated' },
@@ -329,7 +331,8 @@ export const generateMockRecommendations = (algoState) => {
         alternatives: [
           { id: 'los_altB', label: 'Friday Discount -15%', labelTemplate: 'Friday Discount -{discount_pct}%', badge: 'Demand Pull', badgeColor: 'emerald',
             actionLabel: 'Apply Discount',
-            description: 'Incentivise organic 2-night arrivals without restricting Saturday',
+            description: 'Softer approach — incentivise 2-night arrivals with a discount instead of a hard stay rule',
+            exclusiveWith: ['primary'],
             inputs: [{ field: 'discount_pct', label: 'Discount', unit: '%', min: 5, max: 40, step: 5, default: 15 }],
             status: 'accepted', payload: { alternative: 'los_altB', discount_pct: 15, target_day: 'friday' },
             toastLabel: 'Friday discount activated' },

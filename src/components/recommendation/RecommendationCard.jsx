@@ -543,12 +543,36 @@ function StrategyPicker({ primary, alternatives, accentColor, bgStyle, rejectLab
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [overrides, setOverrides] = useState({})
 
-  const toggleAlt = (id) =>
+  // Split: exclusive alts compete with primary (radio behavior); additive alts stack freely
+  const exclusiveAlts = alternatives?.filter((a) => a.exclusiveWith?.includes('primary')) || []
+  const additiveAlts = alternatives?.filter((a) => !a.exclusiveWith?.includes('primary')) || []
+
+  const handlePrimaryClick = () => {
+    const willCheck = !primaryChecked
+    if (willCheck) {
+      // Re-selecting primary: deselect any exclusive alt that was chosen instead
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        exclusiveAlts.forEach((a) => next.delete(a.id))
+        return next
+      })
+    }
+    setPrimaryChecked(willCheck)
+  }
+
+  const toggleAlt = (id) => {
+    const alt = alternatives?.find((a) => a.id === id)
+    const willSelect = !selectedIds.has(id)
+    if (willSelect && alt?.exclusiveWith?.includes('primary')) {
+      // Selecting an exclusive alt: deselect primary
+      setPrimaryChecked(false)
+    }
     setSelectedIds((prev) => {
       const next = new Set(prev)
       next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
+  }
 
   const effectiveLabel = (alt) => {
     if (!alt.labelTemplate) return alt.label
@@ -584,76 +608,94 @@ function StrategyPicker({ primary, alternatives, accentColor, bgStyle, rejectLab
       ? primary.applyLabel
       : selectedAlts[0]?.actionLabel || 'Apply Selected'
 
-  return (
-    <div className={`w-full md:w-80 lg:w-[400px] ${bgStyle} p-4 flex flex-col rounded-b-xl md:rounded-bl-none md:rounded-br-xl`}>
-
-      {/* Primary strategy row */}
-      <div className={`rounded-xl border transition-all mb-2 ${primaryChecked ? 'bg-white border-slate-200 shadow-sm' : 'border-slate-200/60 bg-white/40'}`}>
+  // Renders a single alt row (shared by exclusive and additive zones)
+  const renderAlt = (alt, isExclusive = false) => {
+    const isSel = selectedIds.has(alt.id)
+    return (
+      <div key={alt.id} className={`rounded-xl border transition-all ${isSel ? 'bg-white border-slate-200 shadow-sm' : 'border-slate-200/60 bg-white/40'}`}>
         <div
           className="flex items-start gap-3 cursor-pointer p-3 select-none"
-          onClick={() => setPrimaryChecked((p) => !p)}
+          onClick={() => toggleAlt(alt.id)}
         >
-          <span className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${primaryChecked ? 'bg-slate-800 border-slate-800' : 'border-slate-300'}`}>
-            {primaryChecked && <Checkmark />}
+          {/* Circle for exclusive (radio feel), square for additive (checkbox feel) */}
+          <span className={`mt-0.5 w-4 h-4 border-2 flex items-center justify-center shrink-0 transition-colors ${isExclusive ? 'rounded-full' : 'rounded'} ${isSel ? 'bg-slate-800 border-slate-800' : 'border-slate-300'}`}>
+            {isSel && (isExclusive
+              ? <span className="w-1.5 h-1.5 rounded-full bg-white block" />
+              : <Checkmark />
+            )}
           </span>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-              <span className="text-sm font-bold text-slate-800 leading-tight">{primary.label}</span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full border bg-emerald-100 text-emerald-700 border-emerald-200 shrink-0">
-                Recommended
-              </span>
+              <span className="text-sm font-bold text-slate-800 leading-tight">{effectiveLabel(alt)}</span>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${BADGE_CLASSES[alt.badgeColor]}`}>{alt.badge}</span>
             </div>
-            <span className="text-xs text-slate-500">{primary.description}</span>
+            <span className="text-xs text-slate-500">{alt.description}</span>
           </div>
         </div>
-        {primaryChecked && primary.content && (
-          <div className="px-3 pb-3" onClick={(e) => e.stopPropagation()}>
-            {primary.content}
+        {isSel && alt.inputs?.map((inp) => {
+          const val = overrides[alt.id]?.[inp.field] ?? inp.default
+          return (
+            <div key={inp.field} onClick={(e) => e.stopPropagation()} className="mx-3 mb-3 flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
+              <span className="text-xs text-slate-500 flex-1">{inp.label}</span>
+              <button onClick={() => setFieldVal(alt.id, inp, val - inp.step)} className="w-7 h-7 rounded border border-slate-200 bg-white text-slate-600 font-bold hover:bg-slate-100 flex items-center justify-center leading-none">−</button>
+              <span className="w-12 text-center text-sm font-bold text-slate-800">{val}{inp.unit}</span>
+              <button onClick={() => setFieldVal(alt.id, inp, val + inp.step)} className="w-7 h-7 rounded border border-slate-200 bg-white text-slate-600 font-bold hover:bg-slate-100 flex items-center justify-center leading-none">+</button>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  return (
+    <div className={`w-full md:w-80 lg:w-[400px] ${bgStyle} p-4 flex flex-col rounded-b-xl md:rounded-bl-none md:rounded-br-xl`}>
+
+      {/* Strategy zone: primary + exclusive alts (radio group) */}
+      <div className="mb-2">
+        {/* Primary row */}
+        <div className={`rounded-xl border transition-all ${primaryChecked ? 'bg-white border-slate-200 shadow-sm' : 'border-slate-200/60 bg-white/40'}`}>
+          <div className="flex items-start gap-3 cursor-pointer p-3 select-none" onClick={handlePrimaryClick}>
+            <span className={`mt-0.5 w-4 h-4 border-2 flex items-center justify-center shrink-0 transition-colors ${exclusiveAlts.length > 0 ? 'rounded-full' : 'rounded'} ${primaryChecked ? 'bg-slate-800 border-slate-800' : 'border-slate-300'}`}>
+              {primaryChecked && (exclusiveAlts.length > 0
+                ? <span className="w-1.5 h-1.5 rounded-full bg-white block" />
+                : <Checkmark />
+              )}
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                <span className="text-sm font-bold text-slate-800 leading-tight">{primary.label}</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full border bg-emerald-100 text-emerald-700 border-emerald-200 shrink-0">
+                  Recommended
+                </span>
+              </div>
+              <span className="text-xs text-slate-500">{primary.description}</span>
+            </div>
           </div>
-        )}
+          {primaryChecked && primary.content && (
+            <div className="px-3 pb-3" onClick={(e) => e.stopPropagation()}>
+              {primary.content}
+            </div>
+          )}
+        </div>
+
+        {/* Exclusive alts with "— or —" divider */}
+        {exclusiveAlts.map((alt) => (
+          <div key={alt.id}>
+            <div className="flex items-center gap-2 my-1.5 px-1">
+              <div className="flex-1 h-px bg-slate-200" />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">or</span>
+              <div className="flex-1 h-px bg-slate-200" />
+            </div>
+            {renderAlt(alt, true)}
+          </div>
+        ))}
       </div>
 
-      {/* Alternatives */}
-      {alternatives?.length > 0 && (
+      {/* Additive alts zone */}
+      {additiveAlts.length > 0 && (
         <div className="space-y-1.5 mb-3">
           <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold px-1 block mt-1">Also apply</span>
-          {alternatives.map((alt) => {
-            const isSel = selectedIds.has(alt.id)
-            return (
-              <div key={alt.id} className={`rounded-xl border transition-all ${isSel ? 'bg-white border-slate-200 shadow-sm' : 'border-slate-200/60 bg-white/40'}`}>
-                <div
-                  className="flex items-start gap-3 cursor-pointer p-3 select-none"
-                  onClick={() => toggleAlt(alt.id)}
-                >
-                  <span className={`mt-0.5 w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${isSel ? 'bg-slate-800 border-slate-800' : 'border-slate-300'}`}>
-                    {isSel && <Checkmark />}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <span className="text-sm font-bold text-slate-800 leading-tight">{effectiveLabel(alt)}</span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${BADGE_CLASSES[alt.badgeColor]}`}>{alt.badge}</span>
-                    </div>
-                    <span className="text-xs text-slate-500">{alt.description}</span>
-                  </div>
-                </div>
-                {isSel && alt.inputs?.map((inp) => {
-                  const val = overrides[alt.id]?.[inp.field] ?? inp.default
-                  return (
-                    <div
-                      key={inp.field}
-                      onClick={(e) => e.stopPropagation()}
-                      className="mx-3 mb-3 flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-200"
-                    >
-                      <span className="text-xs text-slate-500 flex-1">{inp.label}</span>
-                      <button onClick={() => setFieldVal(alt.id, inp, val - inp.step)} className="w-7 h-7 rounded border border-slate-200 bg-white text-slate-600 font-bold hover:bg-slate-100 flex items-center justify-center leading-none">−</button>
-                      <span className="w-12 text-center text-sm font-bold text-slate-800">{val}{inp.unit}</span>
-                      <button onClick={() => setFieldVal(alt.id, inp, val + inp.step)} className="w-7 h-7 rounded border border-slate-200 bg-white text-slate-600 font-bold hover:bg-slate-100 flex items-center justify-center leading-none">+</button>
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          })}
+          {additiveAlts.map((alt) => renderAlt(alt, false))}
         </div>
       )}
 
