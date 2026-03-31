@@ -159,23 +159,36 @@ function ToastStack({ toasts, onUndo, onDismiss }) {
             <span className="text-sm font-medium truncate">
               {toast.isBatch ? (
                 <>Approved {toast.count} high-confidence items</>
-              ) : (
-                <>
-                  {toast.status === 'accepted'
-                    ? 'Approved'
-                    : toast.status === 'dismissed'
-                    ? 'Dismissed'
-                    : 'Rejected'}{' '}
-                  {toast.rec.type === 'channel'
-                    ? 'restrictions'
-                    : toast.rec.type === 'los'
-                    ? 'MNS'
-                    : toast.rec.type === 'equity'
-                    ? 'allocation pause'
-                    : 'rate'}{' '}
-                  for {toast.rec.room_type}
-                </>
-              )}
+              ) : (() => {
+                const altIds = toast.payload?.alternatives || []
+                const primaryApplied = toast.payload?.primaryApplied || false
+                const totalApplied = (primaryApplied ? 1 : 0) + altIds.length
+                const altLabel =
+                  totalApplied > 1
+                    ? `${totalApplied} strategies applied`
+                    : altIds.length === 1 && !primaryApplied
+                    ? toast.rec.alternatives?.find((a) => a.id === altIds[0])?.toastLabel
+                    : null
+                return altLabel ? (
+                  <>{altLabel} — {toast.rec.room_type}</>
+                ) : (
+                  <>
+                    {toast.status === 'accepted'
+                      ? 'Approved'
+                      : toast.status === 'dismissed'
+                      ? 'Dismissed'
+                      : 'Rejected'}{' '}
+                    {toast.rec.type === 'channel'
+                      ? 'restrictions'
+                      : toast.rec.type === 'los'
+                      ? 'MNS'
+                      : toast.rec.type === 'equity'
+                      ? 'allocation pause'
+                      : 'rate'}{' '}
+                    for {toast.rec.room_type}
+                  </>
+                )
+              })()}
             </span>
           </div>
           <div className="flex items-center space-x-3 border-l border-slate-700 pl-3 shrink-0">

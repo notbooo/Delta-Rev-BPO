@@ -1,7 +1,11 @@
+import { useState } from 'react'
 import GlossaryTerm from '../components/common/GlossaryTerm'
 import { formatJPY } from '../utils/formatters'
 
-export default function PaceForecastView() {
+const ROOM_TYPES = ['All Room Types', 'Standard Twin', 'Deluxe Double', 'Suite']
+
+export default function PaceForecastView({ onNavigateBack }) {
+  const [selectedRoomType, setSelectedRoomType] = useState('All Room Types')
   const dates = Array.from({ length: 14 }).map((_, i) => {
     const d = new Date()
     d.setDate(d.getDate() + i + 1)
@@ -11,12 +15,24 @@ export default function PaceForecastView() {
   return (
     <div className="max-w-6xl mx-auto bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col mb-12">
       <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 rounded-t-xl">
-        <h3 className="font-bold text-slate-800">14-Day Demand Forecast &amp; Pace</h3>
-        <select className="text-sm border-slate-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white py-2 px-3 outline-none">
-          <option>All Room Types</option>
-          <option>Standard Twin</option>
-          <option>Deluxe Double</option>
-          <option>Suite</option>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onNavigateBack}
+            className="text-blue-600 hover:text-blue-700 font-medium text-sm transition-colors"
+            title="Back to Morning Briefing"
+          >
+            ← Back
+          </button>
+          <h3 className="font-bold text-slate-800">14-Day Demand Forecast &amp; Pace</h3>
+        </div>
+        <select
+          value={selectedRoomType}
+          onChange={(e) => setSelectedRoomType(e.target.value)}
+          className="text-sm border border-slate-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 bg-white py-2 px-3 outline-none"
+        >
+          {ROOM_TYPES.map((room) => (
+            <option key={room}>{room}</option>
+          ))}
         </select>
       </div>
 
@@ -44,6 +60,11 @@ export default function PaceForecastView() {
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white">
             {dates.map((date, idx) => {
+              const roomType = ROOM_TYPES[idx % ROOM_TYPES.length]
+              const shouldShow = selectedRoomType === 'All Room Types' || roomType === selectedRoomType
+
+              if (!shouldShow) return null
+
               const otb = 40 + Math.floor(Math.random() * 40)
               const forecast = Math.min(100, otb + Math.floor(Math.random() * 20))
               const pace = (Math.random() * 10 - 2).toFixed(1)

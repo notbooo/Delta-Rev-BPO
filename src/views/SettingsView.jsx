@@ -8,6 +8,8 @@ export default function SettingsView({
   onOpenAlgoInfo,
   absoluteMinRate,
   setAbsoluteMinRate,
+  absoluteMaxRate,
+  setAbsoluteMaxRate,
 }) {
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-12">
@@ -37,7 +39,8 @@ export default function SettingsView({
             </label>
             <input
               type="number"
-              defaultValue="120000"
+              value={absoluteMaxRate}
+              onChange={(e) => setAbsoluteMaxRate(parseInt(e.target.value, 10) || 0)}
               className="w-full px-4 py-2 border border-slate-300 rounded-md shadow-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
             />
             <p className="mt-2 text-xs text-slate-500 font-medium">

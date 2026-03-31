@@ -36,6 +36,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [modalData, setModalData] = useState(null)
   const [absoluteMinRate, setAbsoluteMinRate] = useState(15000)
+  const [absoluteMaxRate, setAbsoluteMaxRate] = useState(120000)
 
   const [algoState, setAlgoState] = useState(INITIAL_ALGO_STATE)
 
@@ -151,11 +152,13 @@ export default function App() {
               onOpenAlgoInfo={setModalData}
               absoluteMinRate={absoluteMinRate}
               setAbsoluteMinRate={setAbsoluteMinRate}
+              absoluteMaxRate={absoluteMaxRate}
+              setAbsoluteMaxRate={setAbsoluteMaxRate}
             />
           ) : activeTab === 'overview' ? (
             <OverviewView />
           ) : activeTab === 'calendar' ? (
-            <PaceForecastView />
+            <PaceForecastView onNavigateBack={() => setActiveTab('briefing')} />
           ) : activeTab === 'glossary' ? (
             <GlossaryView />
           ) : null}
