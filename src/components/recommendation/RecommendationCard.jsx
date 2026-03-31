@@ -186,7 +186,7 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
       </div>
 
       {/* Card Body */}
-      <div className="flex flex-col md:flex-row overflow-visible">
+      <div className="flex flex-col md:flex-row overflow-hidden md:overflow-visible">
         {/* Left: Driver reasons */}
         <div className="flex-1 p-5 border-b md:border-b-0 md:border-r border-slate-100 bg-white md:rounded-bl-xl">
           <div className="flex items-center justify-between mb-4">
