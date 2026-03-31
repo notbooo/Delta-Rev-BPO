@@ -3,7 +3,7 @@ import { Icons } from '../common/Icons'
 import GlossaryTerm from '../common/GlossaryTerm'
 import { formatJPY } from '../../utils/formatters'
 
-export default function RecommendationCard({ rec, onAction, onOpenDetails, absoluteMinRate }) {
+export default function RecommendationCard({ rec, onAction, onOpenDetails, absoluteMinRate, absoluteMaxRate, minLos }) {
   const [adjustedPrice, setAdjustedPrice] = useState(rec.recommended_price)
   const [showAllDrivers, setShowAllDrivers] = useState(false)
   const [isEditingPrice, setIsEditingPrice] = useState(false)
@@ -13,9 +13,9 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
 
   const [restrictedChannels, setRestrictedChannels] = useState({
     'Booking.com': true,
-    Agoda: true,
-    Expedia: true,
+    Airbnb: true,
   })
+  const [targetMns, setTargetMns] = useState(rec.los_action?.target_mns ?? (minLos ?? 2))
 
   const handleAdjust = (amount) => setAdjustedPrice((prev) => prev + amount)
 
@@ -135,8 +135,7 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
 
   const OTA_LIST = [
     { name: 'Booking.com', rate: '18%' },
-    { name: 'Agoda', rate: '15%' },
-    { name: 'Expedia', rate: '18%' },
+    { name: 'Airbnb', rate: '15%' },
   ]
 
   return (
@@ -216,6 +215,14 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
               {showAllDrivers ? '- View Less' : `+ ${activeDrivers.length - 2} More Factors`}
             </button>
           )}
+          {/* Competitor market context strip */}
+          {rec.metrics.competitor_min && rec.metrics.competitor_max && (
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-500">
+              <Icons.TrendingUp />
+              <span>Market range: <span className="font-semibold text-slate-700">{formatJPY(rec.metrics.competitor_min)} – {formatJPY(rec.metrics.competitor_max)}</span></span>
+              <span className="ml-auto text-slate-400">Your rate: <span className="font-semibold text-slate-600">{formatJPY(rec.current_price)}</span></span>
+            </div>
+          )}
         </div>
 
         {/* Right: Strategy Picker (unified for all card types) */}
@@ -250,10 +257,17 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
         ) : rec.type === 'los' ? (
           <StrategyPicker
             primary={{
-              label: `Set Min Stay to ${rec.los_action.target_mns} Nights`,
+              label: `Set Min Stay to ${targetMns} Night${targetMns > 1 ? 's' : ''}`,
               description: 'Close shoulder dates to 1-night arrivals',
               applyLabel: 'Apply MNS', applyIcon: <Icons.Lock />,
-              content: <LosPrimaryContent rec={rec} />,
+              content: (
+                <LosPrimaryContent
+                  rec={rec}
+                  targetMns={targetMns}
+                  minLos={rec.los_action.min_mns ?? 1}
+                  onChangeMns={setTargetMns}
+                />
+              ),
             }}
             alternatives={rec.alternatives}
             accentColor="amber"
@@ -261,7 +275,7 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
             rejectLabel="Reject"
             onApply={(primaryChecked, alts, buildPayload) => {
               const payload = {}
-              if (primaryChecked) { payload.mns = rec.los_action.target_mns; payload.primaryApplied = true }
+              if (primaryChecked) { payload.mns = targetMns; payload.primaryApplied = true }
               alts.forEach((a) => Object.assign(payload, buildPayload(a)))
               if (alts.length > 0) payload.alternatives = alts.map((a) => a.id)
               onAction(rec.id, 'accepted', payload)
@@ -395,19 +409,33 @@ function ChannelPrimaryContent({ rec, restrictedChannels, toggleChannel, otaList
   )
 }
 
-function LosPrimaryContent({ rec }) {
+function LosPrimaryContent({ rec, targetMns, minLos, onChangeMns }) {
+  const currentMns = rec.los_action.current_mns ?? 1
   return (
-    <div className="bg-white border border-amber-200 rounded-lg p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-semibold text-slate-600">Current MNS:</span>
-        <span className="text-sm font-bold text-slate-900">1 Night</span>
+    <div className="bg-white border border-amber-200 rounded-lg p-3 shadow-sm space-y-2">
+      <div className="flex items-center justify-between text-xs text-slate-500">
+        <span>Current min stay</span>
+        <span className="font-bold text-slate-700">{currentMns} Night{currentMns !== 1 ? 's' : ''}</span>
       </div>
-      <div className="flex items-center justify-center py-1 text-amber-300"><Icons.ArrowRight /></div>
-      <div className="flex items-center justify-between mt-1">
-        <span className="text-sm font-semibold text-slate-600">Proposed:</span>
-        <span className="text-sm font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">{rec.los_action.target_mns} Nights (Min)</span>
+      <div className="flex items-center justify-between bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+        <span className="text-xs font-semibold text-amber-700">Proposed min stay</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onChangeMns(Math.max(minLos, targetMns - 1))}
+            className="w-7 h-7 rounded border border-amber-300 bg-white text-amber-700 font-bold hover:bg-amber-100 flex items-center justify-center leading-none"
+          >−</button>
+          <span className="w-16 text-center text-sm font-bold text-amber-900">
+            {targetMns} Night{targetMns !== 1 ? 's' : ''}
+          </span>
+          <button
+            onClick={() => onChangeMns(targetMns + 1)}
+            className="w-7 h-7 rounded border border-amber-300 bg-white text-amber-700 font-bold hover:bg-amber-100 flex items-center justify-center leading-none"
+          >+</button>
+        </div>
       </div>
-      {rec.los_action.reason && <p className="text-xs text-slate-500 text-center mt-2">{rec.los_action.reason}</p>}
+      {rec.los_action.reason && (
+        <p className="text-xs text-slate-400 text-center pt-0.5">{rec.los_action.reason}</p>
+      )}
     </div>
   )
 }

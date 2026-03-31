@@ -5,7 +5,7 @@ export const generateMockRecommendations = (algoState) => {
   const today = new Date().toISOString().split('T')[0]
   const dates = generateDates(new Date(new Date().setDate(new Date().getDate() + 14)), 7)
 
-  const roomTypes = ['Deluxe Double', 'Standard Twin', 'Suite']
+  const roomTypes = ['2 Bedroom Deluxe', '3 Bedroom Deluxe']
   const events = [
     { date: dates[2], name: '🌸 Cherry Blossom Peak', mult: 1.8, type: 'surge' },
     { date: dates[3], name: '🌸 Cherry Blossom Peak', mult: 1.8, type: 'surge' },
@@ -20,8 +20,8 @@ export const generateMockRecommendations = (algoState) => {
     const eventMult = algoState.anomaly && event ? event.mult : isWeekend ? 1.2 : 1.0
 
     roomTypes.forEach((room) => {
-      const basePrice = room === 'Suite' ? 65000 : room === 'Deluxe Double' ? 35000 : 25000
-      const physicalRooms = room === 'Suite' ? 5 : 20
+      const basePrice = room === '3 Bedroom Deluxe' ? 65000 : 35000
+      const physicalRooms = room === '3 Bedroom Deluxe' ? 6 : 10
 
       const baseBooked =
         eventMult > 1.2
@@ -67,6 +67,8 @@ export const generateMockRecommendations = (algoState) => {
         recType = 'los'
         losAction = {
           action: 'Increase MNS',
+          current_mns: 1,
+          min_mns: 1,
           target_mns: 2,
           reason: 'Protect Friday/Sunday occupancy from single-night Saturday bookings.',
         }
@@ -132,6 +134,8 @@ export const generateMockRecommendations = (algoState) => {
             occupancy_forecast: forecastedOcc,
             pace_vs_ly: algoState.pace ? `+${Math.round(pace * 2.5)}%` : 'N/A',
             competitor_avg: optimizedPrice + (Math.random() > 0.5 ? 2000 : -1000),
+            competitor_min: Math.round(optimizedPrice * 0.82),
+            competitor_max: Math.round(optimizedPrice * 1.25),
             elasticity_active: algoState.elasticity,
             overbooking_active: algoState.overbooking,
             displacement_active: algoState.displacement,
@@ -141,6 +145,8 @@ export const generateMockRecommendations = (algoState) => {
             effective_rooms: effectiveTotalRooms,
             event_mult: eventMult,
             base_price: basePrice,
+            current_los: 1,
+            min_los: 1,
           },
           confidence: rmsAlgorithms.calculateConfidence(mapeRaw),
           status: 'pending',
@@ -157,9 +163,9 @@ export const generateMockRecommendations = (algoState) => {
       type: 'equity',
       booking_ts: today,
       checkin_date: dates[1],
-      room_type: 'Standard Twin',
-      current_price: 25000,
-      recommended_price: 25000,
+      room_type: '2 Bedroom Deluxe',
+      current_price: 35000,
+      recommended_price: 35000,
       equity_action: {
         unit_ahead: 'Unit 101',
         unit_behind: 'Unit 102',
@@ -169,7 +175,9 @@ export const generateMockRecommendations = (algoState) => {
       metrics: {
         occupancy_forecast: 60,
         pace_vs_ly: '+5%',
-        competitor_avg: 24000,
+        competitor_avg: 34000,
+        competitor_min: 28000,
+        competitor_max: 42000,
         elasticity_active: false,
         overbooking_active: false,
         displacement_active: false,
@@ -199,9 +207,9 @@ export const generateMockRecommendations = (algoState) => {
     type: 'equity',
     booking_ts: today,
     checkin_date: dates[2],
-    room_type: 'Deluxe Double',
-    current_price: 35000,
-    recommended_price: 35000,
+    room_type: '3 Bedroom Deluxe',
+    current_price: 65000,
+    recommended_price: 65000,
     equity_action: {
       unit_ahead: 'Unit 103',
       unit_behind: 'Unit 104',
@@ -211,7 +219,9 @@ export const generateMockRecommendations = (algoState) => {
     metrics: {
       occupancy_forecast: 55,
       pace_vs_ly: '+3%',
-      competitor_avg: 34000,
+      competitor_avg: 63000,
+      competitor_min: 52000,
+      competitor_max: 78000,
       elasticity_active: false,
       overbooking_active: false,
       displacement_active: false,
@@ -236,10 +246,11 @@ export const generateMockRecommendations = (algoState) => {
 
   // --- Guaranteed LOS recs (2) ---
   const losRecs = [
-    { id: `rec_${dates[1]}_DeluxeDouble_los`, date: dates[1], room_type: 'Deluxe Double', current_price: 35000 },
-    { id: `rec_${dates[3]}_StandardTwin_los`, date: dates[3], room_type: 'Standard Twin', current_price: 25000 },
+    { id: `rec_${dates[1]}_2BRDeluxe_los`, date: dates[1], room_type: '2 Bedroom Deluxe', current_price: 35000 },
+    { id: `rec_${dates[3]}_3BRDeluxe_los`, date: dates[3], room_type: '3 Bedroom Deluxe', current_price: 65000 },
   ]
   losRecs.forEach(({ id, date, room_type, current_price }) => {
+    const is3BR = room_type === '3 Bedroom Deluxe'
     if (!recommendations.find((r) => r.id === id)) {
       recommendations.push({
         id,
@@ -253,22 +264,28 @@ export const generateMockRecommendations = (algoState) => {
         channel_action: null,
         los_action: {
           action: 'Increase MNS',
-          target_mns: 2,
+          current_mns: 1,
+          min_mns: 1,
+          target_mns: is3BR ? 3 : 2,
           reason: 'Protect Friday/Sunday occupancy from single-night Saturday bookings.',
         },
         metrics: {
           occupancy_forecast: 68,
           pace_vs_ly: '+8%',
-          competitor_avg: current_price - 1000,
+          competitor_avg: current_price - 2000,
+          competitor_min: Math.round(current_price * 0.80),
+          competitor_max: Math.round(current_price * 1.22),
           elasticity_active: false,
           overbooking_active: false,
           displacement_active: false,
-          current_booked: current_price === 35000 ? 14 : 12,
-          forecasted_demand: 18,
-          physical_rooms: 20,
-          effective_rooms: 20,
+          current_booked: is3BR ? 4 : 7,
+          forecasted_demand: is3BR ? 5 : 9,
+          physical_rooms: is3BR ? 6 : 10,
+          effective_rooms: is3BR ? 6 : 10,
           event_mult: 1.2,
           base_price: current_price,
+          current_los: 1,
+          min_los: 1,
         },
         confidence: { level: 'High', color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
         status: 'pending',
@@ -291,8 +308,8 @@ export const generateMockRecommendations = (algoState) => {
 
   // --- Guaranteed slow-demand price recs (2) ---
   const slowPriceRecs = [
-    { id: `rec_${dates[5]}_Suite_slow`, date: dates[5] },
-    { id: `rec_${dates[6]}_Suite_slow`, date: dates[6] },
+    { id: `rec_${dates[5]}_3BRDeluxe_slow`, date: dates[5] },
+    { id: `rec_${dates[6]}_3BRDeluxe_slow`, date: dates[6] },
   ]
   slowPriceRecs.forEach(({ id, date }) => {
     if (!recommendations.find((r) => r.id === id)) {
@@ -301,7 +318,7 @@ export const generateMockRecommendations = (algoState) => {
         type: 'price',
         booking_ts: today,
         checkin_date: date,
-        room_type: 'Suite',
+        room_type: '3 Bedroom Deluxe',
         current_price: 65000,
         recommended_price: 52000,
         event_tag: null,
@@ -311,15 +328,19 @@ export const generateMockRecommendations = (algoState) => {
           occupancy_forecast: 22,
           pace_vs_ly: '-15%',
           competitor_avg: 54000,
+          competitor_min: 44000,
+          competitor_max: 68000,
           elasticity_active: false,
           overbooking_active: false,
           displacement_active: false,
           current_booked: 1,
           forecasted_demand: 2,
-          physical_rooms: 5,
-          effective_rooms: 5,
+          physical_rooms: 6,
+          effective_rooms: 6,
           event_mult: 1.0,
           base_price: 65000,
+          current_los: 1,
+          min_los: 1,
         },
         confidence: { level: 'Medium', color: 'text-amber-600 bg-amber-50 border-amber-200' },
         status: 'pending',

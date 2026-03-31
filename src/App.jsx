@@ -35,8 +35,16 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('briefing')
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [modalData, setModalData] = useState(null)
-  const [absoluteMinRate, setAbsoluteMinRate] = useState(15000)
-  const [absoluteMaxRate, setAbsoluteMaxRate] = useState(120000)
+  const [rateSettings, setRateSettings] = useState({
+    '2 Bedroom Deluxe': { minRate: 25000, maxRate: 120000, minLos: 2 },
+    '3 Bedroom Deluxe': { minRate: 50000, maxRate: 200000, minLos: 3 },
+  })
+
+  const updateRateSetting = (roomType, field, value) =>
+    setRateSettings((prev) => ({
+      ...prev,
+      [roomType]: { ...prev[roomType], [field]: value },
+    }))
 
   const [algoState, setAlgoState] = useState(INITIAL_ALGO_STATE)
 
@@ -140,7 +148,7 @@ export default function App() {
               onUndo={handleUndo}
               onDismissToast={dismissToast}
               onOpenDetails={setModalData}
-              absoluteMinRate={absoluteMinRate}
+              rateSettings={rateSettings}
               onNavigateToCalendar={() => setActiveTab('calendar')}
               onResetQueue={resetQueue}
             />
@@ -150,10 +158,8 @@ export default function App() {
               onToggleAlgo={handleToggleAlgo}
               onRiskChange={handleRiskChange}
               onOpenAlgoInfo={setModalData}
-              absoluteMinRate={absoluteMinRate}
-              setAbsoluteMinRate={setAbsoluteMinRate}
-              absoluteMaxRate={absoluteMaxRate}
-              setAbsoluteMaxRate={setAbsoluteMaxRate}
+              rateSettings={rateSettings}
+              updateRateSetting={updateRateSetting}
             />
           ) : activeTab === 'overview' ? (
             <OverviewView />

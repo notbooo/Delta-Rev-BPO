@@ -10,7 +10,7 @@ export default function MorningBriefingView({
   onUndo,
   onDismissToast,
   onOpenDetails,
-  absoluteMinRate,
+  rateSettings,
   onNavigateToCalendar,
   onResetQueue,
 }) {
@@ -70,7 +70,9 @@ export default function MorningBriefingView({
               rec={rec}
               onAction={onAction}
               onOpenDetails={onOpenDetails}
-              absoluteMinRate={absoluteMinRate}
+              absoluteMinRate={rateSettings?.[rec.room_type]?.minRate ?? 25000}
+              absoluteMaxRate={rateSettings?.[rec.room_type]?.maxRate ?? 200000}
+              minLos={rateSettings?.[rec.room_type]?.minLos ?? 1}
             />
           ))}
         </div>

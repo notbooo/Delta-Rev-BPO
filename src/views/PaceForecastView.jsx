@@ -2,7 +2,8 @@ import { useState } from 'react'
 import GlossaryTerm from '../components/common/GlossaryTerm'
 import { formatJPY } from '../utils/formatters'
 
-const ROOM_TYPES = ['All Room Types', 'Standard Twin', 'Deluxe Double', 'Suite']
+const ROOM_TYPES = ['All Room Types', '2 Bedroom Deluxe', '3 Bedroom Deluxe']
+const DATA_ROOM_TYPES = ['2 Bedroom Deluxe', '3 Bedroom Deluxe']
 
 export default function PaceForecastView({ onNavigateBack }) {
   const [selectedRoomType, setSelectedRoomType] = useState('All Room Types')
@@ -41,6 +42,9 @@ export default function PaceForecastView({ onNavigateBack }) {
           <thead className="bg-slate-50 text-slate-500 shadow-sm">
             <tr>
               <th className="px-6 py-3 text-left font-semibold">Date</th>
+              {selectedRoomType === 'All Room Types' && (
+                <th className="px-6 py-3 text-left font-semibold">Room Type</th>
+              )}
               <th className="px-6 py-3 text-right font-semibold">
                 <GlossaryTerm
                   term="Booked (OTB)"
@@ -60,7 +64,7 @@ export default function PaceForecastView({ onNavigateBack }) {
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white">
             {dates.map((date, idx) => {
-              const roomType = ROOM_TYPES[idx % ROOM_TYPES.length]
+              const roomType = DATA_ROOM_TYPES[idx % DATA_ROOM_TYPES.length]
               const shouldShow = selectedRoomType === 'All Room Types' || roomType === selectedRoomType
 
               if (!shouldShow) return null
@@ -68,7 +72,8 @@ export default function PaceForecastView({ onNavigateBack }) {
               const otb = 40 + Math.floor(Math.random() * 40)
               const forecast = Math.min(100, otb + Math.floor(Math.random() * 20))
               const pace = (Math.random() * 10 - 2).toFixed(1)
-              const rate = 25000 + Math.floor(Math.random() * 15) * 1000
+              const baseRate = roomType === '3 Bedroom Deluxe' ? 65000 : 35000
+              const rate = baseRate + Math.floor(Math.random() * 10) * 1000
               const isWeekend = date.getDay() === 0 || date.getDay() === 6
 
               return (
@@ -82,6 +87,13 @@ export default function PaceForecastView({ onNavigateBack }) {
                       })}
                     </span>
                   </td>
+                  {selectedRoomType === 'All Room Types' && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                        {roomType}
+                      </span>
+                    </td>
+                  )}
                   <td className="px-6 py-4 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end space-x-3">
                       <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
