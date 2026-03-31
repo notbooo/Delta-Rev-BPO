@@ -11,6 +11,8 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
   const [isMinRateWarning, setIsMinRateWarning] = useState(false)
   const inputRef = useRef(null)
 
+  const [showComps, setShowComps] = useState(false)
+
   const [restrictedChannels, setRestrictedChannels] = useState({
     'Booking.com': true,
     Airbnb: true,
@@ -155,6 +157,11 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
                 <span className="mr-1.5 text-[10px]">✨</span> {rec.event_tag}
               </span>
             )}
+            {rec.type === 'price' && (
+              <span className="px-2.5 py-1 rounded bg-blue-100 border border-blue-200 text-blue-800 text-xs font-bold flex items-center shadow-sm">
+                <Icons.TrendingUp /> <span className="ml-1.5">Rate Optimization</span>
+              </span>
+            )}
             {rec.type === 'channel' && (
               <span className="px-2.5 py-1 rounded bg-indigo-100 border border-indigo-200 text-indigo-800 text-xs font-bold flex items-center shadow-sm">
                 <Icons.Globe /> <span className="ml-1.5">Channel Yielding</span>
@@ -203,7 +210,7 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
                 <div className="pt-0.5 flex-1 pr-2 relative">
                   <p className="text-sm font-bold text-slate-800 leading-tight mb-0.5 relative z-10">{driver.title}</p>
                   <p className="text-xs text-slate-500 relative z-10">{driver.subtitle}</p>
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-0 group-hover/driver:opacity-100 text-slate-300 transition-opacity">
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-30 group-hover/driver:opacity-100 text-slate-300 transition-opacity">
                     <Icons.ArrowRight />
                   </div>
                 </div>
@@ -216,11 +223,51 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
             </button>
           )}
           {/* Competitor market context strip */}
-          {rec.metrics.competitor_min && rec.metrics.competitor_max && (
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-500">
-              <Icons.TrendingUp />
-              <span>Market range: <span className="font-semibold text-slate-700">{formatJPY(rec.metrics.competitor_min)} – {formatJPY(rec.metrics.competitor_max)}</span></span>
-              <span className="ml-auto text-slate-400">Your rate: <span className="font-semibold text-slate-600">{formatJPY(rec.current_price)}</span></span>
+          {(rec.type === 'price' || rec.type === 'channel') && rec.metrics.competitor_min && rec.metrics.competitor_max && (
+            <div className="mt-4 pt-3 border-t border-slate-100">
+              <button
+                onClick={() => setShowComps((p) => !p)}
+                className="w-full flex items-center gap-2 text-xs text-slate-500 hover:text-slate-700 transition-colors group"
+              >
+                <Icons.TrendingUp />
+                <span>Market range: <span className="font-semibold text-slate-700">{formatJPY(rec.metrics.competitor_min)} – {formatJPY(rec.metrics.competitor_max)}</span></span>
+                <span className="ml-auto text-slate-400">Your rate: <span className="font-semibold text-slate-600">{formatJPY(rec.current_price)}</span></span>
+                <span className={`text-slate-300 group-hover:text-slate-500 transition-all ${showComps ? 'rotate-180' : ''}`}>
+                  <Icons.ChevronDown />
+                </span>
+              </button>
+              {showComps && rec.metrics.competitor_list?.length > 0 && (
+                <div className="mt-2 rounded-lg border border-slate-100 overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-400 uppercase tracking-wider">
+                        <th className="px-3 py-1.5 text-left font-semibold">Comp Set</th>
+                        <th className="px-3 py-1.5 text-left font-semibold hidden sm:table-cell">Room</th>
+                        <th className="px-3 py-1.5 text-right font-semibold">Rate</th>
+                        <th className="px-3 py-1.5 text-right font-semibold">vs You</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 bg-white">
+                      {rec.metrics.competitor_list.map((comp, i) => {
+                        const delta = comp.rate - rec.current_price
+                        return (
+                          <tr key={i} className="hover:bg-slate-50">
+                            <td className="px-3 py-2">
+                              <div className="font-medium text-slate-700 leading-tight">{comp.name}</div>
+                              <div className="text-slate-400">{'★'.repeat(comp.stars)}{'☆'.repeat(5 - comp.stars)}</div>
+                            </td>
+                            <td className="px-3 py-2 text-slate-500 hidden sm:table-cell">{comp.room}</td>
+                            <td className="px-3 py-2 text-right font-semibold text-slate-700">{formatJPY(comp.rate)}</td>
+                            <td className={`px-3 py-2 text-right font-bold ${delta > 0 ? 'text-emerald-600' : delta < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                              {delta === 0 ? '—' : `${delta > 0 ? '+' : ''}${formatJPY(delta)}`}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -228,6 +275,7 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
         {/* Right: Strategy Picker (unified for all card types) */}
         {rec.type === 'equity' ? (
           <StrategyPicker
+            initialPrimaryChecked={rec.confidence.level !== 'Low'}
             primary={{
               label: `Pause ${rec.equity_action.unit_ahead} on OTAs`,
               description: `Lets ${rec.equity_action.unit_behind} capture demand and close the revenue gap`,
@@ -256,10 +304,11 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
           />
         ) : rec.type === 'los' ? (
           <StrategyPicker
+            initialPrimaryChecked={rec.confidence.level !== 'Low'}
             primary={{
               label: `Set Min Stay to ${targetMns} Night${targetMns > 1 ? 's' : ''}`,
               description: 'Close shoulder dates to 1-night arrivals',
-              applyLabel: 'Apply MNS', applyIcon: <Icons.Lock />,
+              applyLabel: 'Apply Min Stay', applyIcon: <Icons.Lock />,
               content: (
                 <LosPrimaryContent
                   rec={rec}
@@ -272,7 +321,7 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
             alternatives={rec.alternatives}
             accentColor="amber"
             bgStyle="bg-amber-50/30"
-            rejectLabel="Reject"
+            rejectLabel="Skip for Now"
             onApply={(primaryChecked, alts, buildPayload) => {
               const payload = {}
               if (primaryChecked) { payload.mns = targetMns; payload.primaryApplied = true }
@@ -284,6 +333,7 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
           />
         ) : rec.type === 'channel' ? (
           <StrategyPicker
+            initialPrimaryChecked={rec.confidence.level !== 'Low'}
             primary={{
               label: 'Close OTA Channels',
               description: `Save ${formatJPY(rec.channel_action.commission_saved)} in commissions on last ${rec.channel_action.rooms_protected} rooms`,
@@ -312,10 +362,11 @@ export default function RecommendationCard({ rec, onAction, onOpenDetails, absol
           />
         ) : (
           <StrategyPicker
+            initialPrimaryChecked={rec.confidence.level !== 'Low'}
             primary={{
               label: `Set Rate to ${formatJPY(adjustedPrice)}`,
               description: diffAmount === 0 ? 'No change from current rate' : `${diffFormatted} from current ${formatJPY(rec.current_price)}`,
-              applyLabel: 'Approve', applyIcon: <Icons.Check />,
+              applyLabel: 'Set Rate', applyIcon: <Icons.Check />,
               content: (
                 <PricePrimaryContent
                   rec={rec}
@@ -366,7 +417,7 @@ function PricePrimaryContent({ rec, adjustedPrice, isMinRateWarning, absoluteMin
         </p>
       )}
       <div className={`flex items-center justify-between bg-white border rounded-lg shadow-sm w-full overflow-hidden transition-all ${isMinRateWarning ? 'border-rose-500 ring-1 ring-rose-500 bg-rose-50' : 'border-slate-200 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-400'}`}>
-        <button onClick={() => onAdjust(-1000)} className="px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-bold text-xl border-r border-slate-100 transition-colors outline-none focus:bg-slate-100">-</button>
+        <button onClick={() => onAdjust(-2000)} className="px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-bold text-xl border-r border-slate-100 transition-colors outline-none focus:bg-slate-100">-</button>
         <div className="flex-1 text-center cursor-text" onClick={onStartEdit}>
           {isEditingPrice ? (
             <input
@@ -382,7 +433,7 @@ function PricePrimaryContent({ rec, adjustedPrice, isMinRateWarning, absoluteMin
             </span>
           )}
         </div>
-        <button onClick={() => onAdjust(1000)} className="px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-bold text-xl border-l border-slate-100 transition-colors outline-none focus:bg-slate-100">+</button>
+        <button onClick={() => onAdjust(2000)} className="px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-bold text-xl border-l border-slate-100 transition-colors outline-none focus:bg-slate-100">+</button>
       </div>
       <p className="text-xs text-slate-400 text-center mt-1.5">Tap price to type a custom value</p>
     </div>
@@ -445,7 +496,7 @@ function EquityPrimaryContent({ rec, restrictedChannels, toggleChannel, otaList 
     <div>
       <div className="flex justify-between items-center mb-2">
         <span className="text-xs font-bold uppercase tracking-wider text-fuchsia-500">Channels to Pause</span>
-        <span className="text-xs text-slate-500">Uncheck to override</span>
+        <span className="text-xs text-slate-500">Uncheck to keep active</span>
       </div>
       <div className="bg-white border border-fuchsia-200 rounded-lg p-3 shadow-sm space-y-2">
         {otaList.map((ota) => (
@@ -456,6 +507,7 @@ function EquityPrimaryContent({ rec, restrictedChannels, toggleChannel, otaList 
           </label>
         ))}
       </div>
+      <p className="text-xs text-slate-400 text-center pt-1">Unit pauses for 48h then auto-resumes</p>
     </div>
   )
 }
@@ -486,8 +538,8 @@ const Checkmark = () => (
 
 // --- StrategyPicker: unified checklist for primary + alternatives ---
 
-function StrategyPicker({ primary, alternatives, accentColor, bgStyle, rejectLabel, onApply, onReject }) {
-  const [primaryChecked, setPrimaryChecked] = useState(true)
+function StrategyPicker({ primary, alternatives, accentColor, bgStyle, rejectLabel, onApply, onReject, initialPrimaryChecked = true }) {
+  const [primaryChecked, setPrimaryChecked] = useState(initialPrimaryChecked)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [overrides, setOverrides] = useState({})
 

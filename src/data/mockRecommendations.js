@@ -1,6 +1,25 @@
 import { generateDates } from '../utils/formatters'
 import { rmsAlgorithms } from '../utils/rmsAlgorithms'
 
+const COMPS_2BR = [
+  { name: 'Shinjuku Granbell Hotel', stars: 4, room: '2BR City View (52m²)' },
+  { name: 'APA Hotel Shinjuku', stars: 3, room: '2BR Standard (44m²)' },
+  { name: 'Hyatt Regency Tokyo', stars: 5, room: 'Deluxe Suite (62m²)' },
+  { name: 'Sotetsu Fresa Inn', stars: 3, room: '2BR Plus (48m²)' },
+]
+const COMPS_3BR = [
+  { name: 'Shinjuku Premium Residence', stars: 4, room: '3BR Suite (85m²)' },
+  { name: 'Palace Hotel Annex', stars: 5, room: '3BR Deluxe (92m²)' },
+  { name: 'Cerulean Tower Tokyo', stars: 5, room: '3BR Family (78m²)' },
+  { name: 'Citadines Grand Suite', stars: 4, room: '3BR Apartment (80m²)' },
+]
+
+const buildCompetitorList = (optimizedPrice, roomType) => {
+  const base = roomType === '3 Bedroom Deluxe' ? COMPS_3BR : COMPS_2BR
+  const multipliers = [0.85, 0.92, 1.08, 1.20]
+  return base.map((c, i) => ({ ...c, rate: Math.round(optimizedPrice * multipliers[i] / 1000) * 1000 }))
+}
+
 export const generateMockRecommendations = (algoState) => {
   const today = new Date().toISOString().split('T')[0]
   const dates = generateDates(new Date(new Date().setDate(new Date().getDate() + 14)), 7)
@@ -77,6 +96,8 @@ export const generateMockRecommendations = (algoState) => {
       if (optimizedPrice !== basePrice || recType === 'channel' || recType === 'los') {
         const mapeRaw = Math.random() * 0.15
 
+        const isRateIncrease = optimizedPrice > basePrice
+
         const alternatives =
           recType === 'channel'
             ? [
@@ -106,15 +127,30 @@ export const generateMockRecommendations = (algoState) => {
                   status: 'accepted', payload: { alternative: 'los_altC', cta_day: 'saturday' },
                   toastLabel: 'Saturday Closed to Arrival (CTA) applied' },
               ]
+            : isRateIncrease
+            ? [
+                { id: 'price_altA', label: 'Push Rate +10% Higher', labelTemplate: 'Push Rate +{extra_pct}% Higher', badge: 'ADR Ceiling', badgeColor: 'blue',
+                  actionLabel: 'Push Higher',
+                  description: 'Test the rate ceiling — demand signal is strong enough to probe further',
+                  inputs: [{ field: 'extra_pct', label: 'Extra Increase', unit: '%', min: 5, max: 30, step: 5, default: 10 }],
+                  status: 'accepted', payload: { alternative: 'price_altA', extra_pct: 10 },
+                  toastLabel: 'Rate pushed to ceiling probe' },
+                { id: 'price_altD', label: 'Non-Refundable at -5%', labelTemplate: 'Non-Refundable -{nr_discount_pct}% Discount', badge: 'Lock-in', badgeColor: 'violet',
+                  actionLabel: 'Apply NR Policy',
+                  description: 'Lock in committed bookings at a slight discount from raised rate — reduces cancellation risk',
+                  inputs: [{ field: 'nr_discount_pct', label: 'NR Discount', unit: '%', min: 3, max: 15, step: 1, default: 5 }],
+                  status: 'accepted', payload: { alternative: 'price_altD', nr_discount_pct: 5, cancellation_policy: 'non_refundable' },
+                  toastLabel: 'Non-refundable rate applied with discount' },
+              ]
             : [
-                { id: 'price_altB', label: 'Opaque Channels', badge: 'Net Rev', badgeColor: 'violet',
+                { id: 'price_altB', label: 'Opaque Flash Sale', badge: 'Net Rev', badgeColor: 'violet',
                   actionLabel: 'Open Opaque',
-                  description: 'Keep public rate high, push discounted inventory to HotelTonight / flash sales',
+                  description: 'Push discounted inventory to HotelTonight / flash sales without lowering public BAR',
                   status: 'accepted', payload: { alternative: 'price_altB', channel: 'opaque' },
                   toastLabel: 'Pushed to opaque flash-sale channels' },
                 { id: 'price_altC', label: 'Relax Restrictions', badge: 'Occ. Focus', badgeColor: 'emerald',
                   actionLabel: 'Relax',
-                  description: 'Remove LOS minimum and switch to flexible cancellation to lower booking barrier',
+                  description: 'Remove min stay and switch to flexible cancellation to lower booking barrier',
                   status: 'accepted', payload: { alternative: 'price_altC', remove_los: true, cancellation_policy: 'flexible' },
                   toastLabel: 'Restrictions relaxed — LOS removed, flexible cancellation' },
               ]
@@ -136,6 +172,7 @@ export const generateMockRecommendations = (algoState) => {
             competitor_avg: optimizedPrice + (Math.random() > 0.5 ? 2000 : -1000),
             competitor_min: Math.round(optimizedPrice * 0.82),
             competitor_max: Math.round(optimizedPrice * 1.25),
+            competitor_list: buildCompetitorList(optimizedPrice, room),
             elasticity_active: algoState.elasticity,
             overbooking_active: algoState.overbooking,
             displacement_active: algoState.displacement,
@@ -330,6 +367,7 @@ export const generateMockRecommendations = (algoState) => {
           competitor_avg: 54000,
           competitor_min: 44000,
           competitor_max: 68000,
+          competitor_list: buildCompetitorList(52000, '3 Bedroom Deluxe'),
           elasticity_active: false,
           overbooking_active: false,
           displacement_active: false,
